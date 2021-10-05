@@ -117,3 +117,29 @@
     (reduce (fn [acc [id entity]]
               (assoc acc (name id) (process-entity entity)))
             {} entities)))
+
+(defn get-entity [id]
+  (-> (get-entities {:ids [id]})
+      (vals)
+      (first)))
+
+(defn search-raw-entities [arg]
+  (let [{:keys [query language limit continue]
+         :or {language :en} :as arg-map} (cond (map? arg) arg
+                                               (string? arg) {:query arg}
+                                               :else {:ids [arg]})]
+    (-> (http/get base-url {:query-params (merge
+                                           {:action "wbsearchentities"
+                                            :search query
+                                            :language (name language)
+                                            :format "json"}
+                                           (select-keys arg-map [:limit :continue]))
+                            :as :json})
+        (:body))))
+
+(defn search-entities [arg]
+  (let [entities (:search (search-raw-entities arg))]
+    (map (fn [entity] (with-meta entity
+                        {'clojure.core.protocols/nav (fn [{:keys [id]} _ _] (get-entities id))}))
+         entities)))
+
