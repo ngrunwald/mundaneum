@@ -1,20 +1,27 @@
 (ns mundaneum.properties
   (:require [clojure.java.io :as io]
-            [clojure.string :as string]
+            [clojure.string :as str]
             [clojure.data.json :as json]))
 
 ;; Properties fetched using the wikibase command line tool:
 ;; https://github.com/maxlath/wikibase-cli
 ;; ... example invocation:
-;; $ wb props > props-2019-10-21.json
-(def properties
-  (->> (json/read (io/reader (io/resource "props-2019-10-21.json")))
-       (reduce (fn [m [id text]]
-                 (assoc m
-                        (-> text
-                            (string/replace #"[ /]" "-")
-                            (string/replace #"[\(\)\'\,]" "")
-                            keyword)
-                        id))
-               {})))
+;; $ wb props -e https://query.wikidata.org/sparql > props-yyyy-mm-dd.json
+
+(defn clean-keyword-text [text]
+  (or (some-> text
+              (str/replace #"[ /]" "-")
+              (str/replace #"[\(\)\'\,]" "")
+              keyword)
+      text))
+
+(let [[props ids] (->> (json/read (io/reader (io/resource "props-2021-09-28.json")))
+                       (reduce (fn [acc [id text]]
+                                 (let [k (clean-keyword-text text)]
+                                   (-> acc
+                                       (assoc-in [0 k] id)
+                                       (assoc-in [1 id] k))))
+                               [{} {}]))]
+  (def properties props)
+  (def urls ids))
 

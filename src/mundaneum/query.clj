@@ -1,6 +1,7 @@
 (ns mundaneum.query
   (:require [clj-time.core        :as ct]
             [clj-time.format      :as cf]
+            [clojure.string       :as str]
             [backtick             :refer [template]]
             [mundaneum.properties :refer [properties]]))
 
@@ -38,15 +39,7 @@
     (if (= (.toString (.getDatatype this))
            "http://www.w3.org/2001/XMLSchema#dateTime")
       (cf/parse (.getLabel this))
-      (.getLabel this)))
-  org.wikidata.wdtk.datamodel.json.jackson.datavalues.JacksonValueString
-  (clojurize-value [this] (.getValue this))
-  org.wikidata.wdtk.datamodel.json.jackson.datavalues.JacksonValueItemId
-  (clojurize-value [this] (.getId this))
-  org.wikidata.wdtk.datamodel.json.jackson.datavalues.JacksonValueTime
-  (clojurize-value [this] (cf/parse (.getTime (.getValue this))))
-  org.wikidata.wdtk.datamodel.json.jackson.datavalues.JacksonValueQuantity
-  (clojurize-value [this] (.toString this)))
+      (.getLabel this))))
 
 (defn clojurize-results [results]
   (mapv (fn [bindings]
