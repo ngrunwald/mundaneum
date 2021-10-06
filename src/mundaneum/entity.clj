@@ -123,6 +123,13 @@
       (vals)
       (first)))
 
+(defn annotate-map-entity [k entity]
+  (alter-meta! entity
+               merge
+               {'clojure.core.protocols/nav (fn [ent _ _] (if-let [id (get ent k)]
+                                                            (get-entity id)
+                                                            ent))}))
+
 (defn search-raw-entities [arg]
   (let [{:keys [query language limit continue]
          :or {language :en} :as arg-map} (cond (map? arg) arg
@@ -139,7 +146,5 @@
 
 (defn search-entities [arg]
   (let [entities (:search (search-raw-entities arg))]
-    (map (fn [entity] (with-meta entity
-                        {'clojure.core.protocols/nav (fn [{:keys [id]} _ _] (get-entities id))}))
-         entities)))
+    (map (partial annotate-map-entity :id) entities)))
 
