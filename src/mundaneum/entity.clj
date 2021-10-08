@@ -4,7 +4,8 @@
             [clojure.string :as str]
             [mundaneum.properties :as p]
             [mundaneum.query :as q]
-            [tick.core :as t]))
+            [tick.core :as t]
+            [clojure.java.browse :as browse]))
 
 (def base-url "https://www.wikidata.org/w/api.php")
 
@@ -14,7 +15,20 @@
   clojure.core.protocols.Navigable
   (nav [_ _ _] ((get-entities url) url)))
 
-(defrecord CommonsMedia [id])
+(defn commons-media-url-from-filename [filename]
+  (let [res (http/get "https://en.wikipedia.org/w/api.php"
+                      {:query-params {:action "query"
+                                      :titles (str "File:" filename)
+                                      :prop "imageinfo"
+                                      :iiprop "url"
+                                      :format "json"}
+                       :as :json})]
+    (get-in res [:body :query :pages :-1 :imageinfo 0 :url])))
+
+(defn browse-media-commons [media]
+  (browse/browse-url (commons-media-url-from-filename (:filename media))))
+
+(defrecord CommonsMedia [filename])
 
 (defn make-wikidtata-entity [url]
   (map->WikidataEntity {:url url :label (or (q/label (name url))
@@ -54,7 +68,8 @@
 
 (defmethod process-value "commonsMedia"
   [{:keys [datavalue]}]
-  (->CommonsMedia (datavalue :value)))
+  (when-let [filename (:value datavalue)]
+    (->CommonsMedia filename)))
 
 (defmethod process-value "quantity"
   [{:keys [datavalue]}]
@@ -115,20 +130,24 @@
                                       :else {:ids [arg]})
         entities (get-raw-entities arg)]
     (reduce (fn [acc [id entity]]
-              (assoc acc (name id) (process-entity entity)))
+              (assoc acc (name id) (assoc (process-entity entity)
+                                          :id (name id))))
             {} entities)))
 
-(defn get-entity [id]
-  (-> (get-entities {:ids [id]})
+(defn get-entity [arg]
+  (-> (cond
+        (instance? WikidataEntity arg) {:ids [(:url arg)]}
+        :else {:ids [arg]})
+      (get-entities)
       (vals)
       (first)))
 
 (defn annotate-map-entity [k entity]
-  (alter-meta! entity
-               merge
-               {'clojure.core.protocols/nav (fn [ent _ _] (if-let [id (get ent k)]
-                                                            (get-entity id)
-                                                            ent))}))
+  (vary-meta entity
+             merge
+             {'clojure.core.protocols/nav (fn [ent _ _] (if-let [id (get ent k)]
+                                                          (get-entity id)
+                                                          ent))}))
 
 (defn search-raw-entities [arg]
   (let [{:keys [query language limit continue]
