@@ -56,15 +56,16 @@
 
 (defmethod process-value "string"
   [{:keys [datavalue]}]
-  (datavalue :value))
+  (:value datavalue))
 
 (defmethod process-value "external-id"
   [{:keys [datavalue]}]
-  (str (datavalue :value)))
+  (when datavalue
+    (str (datavalue :value))))
 
 (defmethod process-value "monolingualtext"
   [{:keys [datavalue]}]
-  (datavalue :value))
+  (:value datavalue))
 
 (defmethod process-value "commonsMedia"
   [{:keys [datavalue]}]
@@ -73,9 +74,10 @@
 
 (defmethod process-value "quantity"
   [{:keys [datavalue]}]
-  (let [{:keys [amount unit]} (datavalue :value)]
-    {:amount (read-string amount)
-     :unit (parse-wikidata-url unit)}))
+  (let [{:keys [amount unit]} (:value datavalue)]
+    (when (and amount unit)
+      {:amount (read-string amount)
+       :unit (parse-wikidata-url unit)})))
 
 (defmethod process-value "time"
   [{:keys [datavalue]}]
@@ -86,7 +88,7 @@
 
 (defmethod process-value "url"
   [{:keys [datavalue]}]
-  (datavalue :value))
+  (:value datavalue))
 
 (defmethod process-value :default
   [snak]
@@ -96,12 +98,18 @@
   (let [{:keys [mainsnak]} c]
     (process-value mainsnak)))
 
+(defn flatten-values [m]
+  (reduce (fn [acc [lang {:keys [value]}]]
+            (assoc acc lang value))
+          {} m))
+
 (defn process-entity [e]
-  (let [{:keys [aliases descriptions modified claims]} e]
+  (let [{:keys [aliases descriptions modified claims labels]} e]
     (merge
-     {:aliases aliases
-      :descriptions descriptions
-      :modified (t/instant modified)}
+     {:aliases (flatten-values aliases)
+      :descriptions (flatten-values descriptions)
+      :modified (t/instant modified)
+      :labels (flatten-values labels)}
      (reduce (fn [acc [prop data]]
                (assoc acc
                       (or (p/urls (name prop))
@@ -129,6 +137,7 @@
                                       (seq? arg) {:ids arg}
                                       :else {:ids [arg]})
         entities (get-raw-entities arg)]
+    (tap> entities)
     (reduce (fn [acc [id entity]]
               (assoc acc (name id) (assoc (process-entity entity)
                                           :id (name id))))
