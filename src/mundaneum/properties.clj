@@ -1,7 +1,7 @@
 (ns mundaneum.properties
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.data.json :as json]))
+            [cheshire.core :as json]))
 
 ;; Properties fetched using the wikibase command line tool:
 ;; https://github.com/maxlath/wikibase-cli
@@ -15,7 +15,7 @@
               keyword)
       text))
 
-(let [[props ids] (->> (json/read (io/reader (io/resource "props-2021-09-28.json")))
+(let [[props ids] (->> (json/decode (slurp (io/resource "props-2021-09-28.json")))
                        (reduce (fn [acc [id text]]
                                  (let [k (clean-keyword-text text)]
                                    (-> acc

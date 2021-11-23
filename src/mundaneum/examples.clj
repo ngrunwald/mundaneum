@@ -61,13 +61,14 @@
                   _ (wdt :coordinate-location) ?coord]]]))
 
 ;; born in ancient Rome or territories thereof
-(->> (query
-      '[:select ?itemLabel
-        :where [:union [[[?item (wdt :place-of-birth) ?pob]
-                         [?pob (wdt :located-in-the-administrative-territorial-entity) * (entity "ancient Rome")]]]]
-        :limit 10])
-     (map :itemLabel)
-     (into #{}))
+;; WARN: Strange Clojure compiler bug inside
+;; (->> (query
+;;       '[:select ?itemLabel
+;;         :where [:union [[[?item (wdt :place-of-birth) ?pob]
+;;                          [?pob (wdt :located-in-the-administrative-territorial-entity) * (entity "ancient rome")]]]]
+;;         :limit 10])
+;;      (map :itemLabel)
+;;      (into #{}))
 ;;=> #{"Marcus Furius Camillus" "Avianus" "Porcia Catonis" "Faustina the Elder" "Hippolytus" "Sylvester I" "Lucius Caecilius Metellus Denter" "Lucius Junius Brutus" "Gaius Valarius Sabinus" "Publius Petronius Turpilianus"}
 
 ;; What places in Germany have names that end in -ow/-itz (indicating
