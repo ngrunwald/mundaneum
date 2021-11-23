@@ -103,10 +103,15 @@
             (assoc acc lang value))
           {} m))
 
+(defn flatten-multi-values [m]
+  (reduce (fn [acc [lang values]]
+            (assoc acc lang (map :value values)))
+          {} m))
+
 (defn process-entity [e]
   (let [{:keys [aliases descriptions modified claims labels]} e]
     (merge
-     {:aliases (flatten-values aliases)
+     {:aliases (flatten-multi-values aliases)
       :descriptions (flatten-values descriptions)
       :modified (t/instant modified)
       :labels (flatten-values labels)}
